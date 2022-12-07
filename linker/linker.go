@@ -42,7 +42,7 @@ func NewLinker[In InputValue, Out OutputValue](
 	}
 }
 
-func (l Linker[In, Out]) Link(parent context.Context) error {
+func (l *Linker[In, Out]) Link(parent context.Context) error {
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 
@@ -57,6 +57,7 @@ func (l Linker[In, Out]) Link(parent context.Context) error {
 		case <-parent.Done():
 			return nil
 		case input := <-l.inputDevice.Process(ctx):
+
 			// if input != nil && input[0].IsZero() {
 			// 	continue
 			// }
@@ -74,6 +75,7 @@ func (l Linker[In, Out]) Link(parent context.Context) error {
 
 func (b *Linker[In, Out]) translateAndSend(in In) error {
 	message, err := b.translator.Translate(in)
+
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
+	_ "gitlab.com/gomidi/midi/v2/drivers/midicatdrv"
 	"go.uber.org/fx"
 )
 
@@ -29,6 +30,7 @@ type (
 func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
 	switches := viper.GetStringMap("gomidi.switches")
 	translations := make(ControlChangeSwitchTranslator, len(switches))
+
 	for k, v := range switches {
 		s := v.(map[string]interface{})
 		translations[keyboard.Keypress{Value: keyboard.InputValue(k)}] = footswitch.Switch{
@@ -36,23 +38,33 @@ func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
 			Controller: uint8(s["controller"].(float64)),
 		}
 	}
+
 	return &translations
 }
 
 func NewOutputDevice() *OutputDevice {
+	out, err := drivers.OutByName(viper.GetString("gomidi.out_port_name"))
+	if err != nil {
+		panic(err)
+	}
 	return &OutputDevice{
-		port: viper.GetString("gomidi.port"),
+		out: out,
 	}
 }
 
-func (t ControlChangeSwitchTranslator) Translate(str keyboard.Keypress) (midi.Message, error) {
-	s, ok := t[str]
+func (t *ControlChangeSwitchTranslator) Translate(str keyboard.Keypress) (midi.Message, error) {
+	if str.Type == keyboard.KeyUp {
+		return nil, fmt.Errorf("action not defined")
+	}
+
+	s, ok := (*t)[keyboard.Keypress{Value: str.Value}]
 
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
 
-	return midi.ControlChange(s.Channel, s.Controller, s.Press().Value()), nil
+	(*t)[keyboard.Keypress{Value: str.Value}] = *s.Press()
+	return midi.ControlChange(s.Channel, s.Controller, s.Value()), nil
 }
 
 func (out OutputDevice) Send(message midi.Message) error {

@@ -2,7 +2,7 @@ package windows
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	"github.com/thefuga/device-linker/keyboard"
 
@@ -32,7 +32,7 @@ func (*Listener) Listen(ctx context.Context, in chan keyboard.Keypress) {
 			return
 		case k := <-keyboardChan:
 			in <- keyboard.Keypress{
-				Value: keyboard.InputValue(fmt.Sprint(k.VKCode)),
+				Value: keyboard.InputValue(strings.ToLower(string(k.VKCode))),
 				Type:  messageTypes[k.Message],
 			}
 		}

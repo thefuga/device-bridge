@@ -43,7 +43,7 @@ func newListener() keyboard.Listener {
 }
 
 func newTranslator(t gomidi.ControlChangeSwitchTranslator) winTranslator {
-	return t
+	return &t
 }
 
 func main() {

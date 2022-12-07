@@ -1,6 +1,8 @@
 package footswitch
 
-import "go.uber.org/fx"
+import (
+	"go.uber.org/fx"
+)
 
 var Module = fx.Provide(NewFootswitch)
 
