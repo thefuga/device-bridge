@@ -3,7 +3,9 @@ package gomidi
 import (
 	"fmt"
 
+	"github.com/spf13/viper"
 	"github.com/thefuga/device-linker/footswitch"
+	"github.com/thefuga/device-linker/keyboard"
 
 	"gitlab.com/gomidi/midi/v2"
 	"gitlab.com/gomidi/midi/v2/drivers"
@@ -16,7 +18,7 @@ var Module = fx.Provide(
 )
 
 type (
-	ControlChangeSwitchTranslator map[string]footswitch.Switch
+	ControlChangeSwitchTranslator map[keyboard.Keypress]footswitch.Switch
 
 	OutputDevice struct {
 		port string
@@ -25,16 +27,25 @@ type (
 )
 
 func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
-	return &ControlChangeSwitchTranslator{}
+	switches := viper.GetStringMap("gomidi.switches")
+	translations := make(ControlChangeSwitchTranslator, len(switches))
+	for k, v := range switches {
+		s := v.(map[string]interface{})
+		translations[keyboard.Keypress{Value: keyboard.InputValue(k)}] = footswitch.Switch{
+			Channel:    uint8(s["channel"].(float64)),
+			Controller: uint8(s["controller"].(float64)),
+		}
+	}
+	return &translations
 }
 
-func NewOutputDevice(port string) *OutputDevice {
+func NewOutputDevice() *OutputDevice {
 	return &OutputDevice{
-		port: port,
+		port: viper.GetString("gomidi.port"),
 	}
 }
 
-func (t ControlChangeSwitchTranslator) Translate(str string) (midi.Message, error) {
+func (t ControlChangeSwitchTranslator) Translate(str keyboard.Keypress) (midi.Message, error) {
 	s, ok := t[str]
 
 	if !ok {

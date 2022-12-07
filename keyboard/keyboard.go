@@ -2,63 +2,65 @@ package keyboard
 
 import (
 	"context"
-	"os"
-	"os/exec"
 	"time"
 
 	"go.uber.org/fx"
+
+	"github.com/spf13/viper"
 )
 
 var Module = fx.Provide(NewKeyboard)
 
+const (
+	KeyDown = iota
+	KeyUp
+)
+
 type (
+	Listener interface {
+		Listen(context.Context, chan Keypress)
+	}
+
 	Keyboard struct {
-		in            chan string
-		out           chan string
+		in       chan Keypress
+		out      chan []Keypress
+		listener Listener
+
 		DebounceDelay time.Duration
+	}
+
+	Keypress struct {
+		Value InputValue
+		Type  int
 	}
 
 	InputValue string
 )
 
-func NewKeyboard(delay time.Duration) *Keyboard {
+// func NewKeyboard(delay time.Duration, listener Listener) *Keyboard {
+func NewKeyboard(listener Listener) *Keyboard {
 	return &Keyboard{
-		DebounceDelay: delay,
+		DebounceDelay: viper.GetDuration("keyboard.debaunce_delay"),
+		listener:      listener,
 	}
 }
 
-func (v InputValue) IsZero() bool {
-	return v == ""
+func (k Keypress) IsZero() bool {
+	return k.Value == ""
 }
 
-func (kb *Keyboard) Listen(ctx context.Context) {
+func (kb *Keyboard) Listen(ctx context.Context) error {
 	if kb.in == nil {
-		kb.in = make(chan string)
+		kb.in = make(chan Keypress)
 	}
 
-	go kb.listen(ctx)
+	go kb.listener.Listen(ctx, kb.in)
+	return nil
 }
 
-func (kb *Keyboard) listen(ctx context.Context) {
-	select {
-	case <-ctx.Done():
-		return
-	default:
-		// disable input buffering
-		exec.Command("stty", "-F", "/dev/tty", "cbreak", "min", "1").Run()
-		// do not display entered characters on the screen
-		exec.Command("stty", "-F", "/dev/tty", "-echo").Run()
-		var b []byte = make([]byte, 1)
-		for {
-			os.Stdin.Read(b)
-			kb.in <- string(b)
-		}
-	}
-}
-
-func (kb *Keyboard) Process(ctx context.Context) chan string {
+func (kb *Keyboard) Process(ctx context.Context) chan []Keypress {
 	if kb.out == nil {
-		kb.out = make(chan string)
+		kb.out = make(chan []Keypress)
 	}
 
 	go kb.processKeystrokes(ctx)
@@ -66,12 +68,12 @@ func (kb *Keyboard) Process(ctx context.Context) chan string {
 }
 
 func (kb *Keyboard) processKeystrokes(ctx context.Context) {
-	var buffer string
+	var buffer []Keypress
 	for {
 		select {
 		case stdin, _ := <-kb.in:
-			if stdin != "" {
-				buffer += stdin
+			if stdin.Value != "" {
+				buffer = append(buffer, stdin)
 				continue
 			}
 		case <-time.After(kb.DebounceDelay):

@@ -18,7 +18,7 @@ type (
 
 	InputDevice[In InputValue] interface {
 		Listen(context.Context) error
-		Process(context.Context) chan In
+		Process(context.Context) chan []In
 	}
 
 	OutputDevice[T OutputValue] interface {
@@ -57,11 +57,15 @@ func (l Linker[In, Out]) Link(parent context.Context) error {
 		case <-parent.Done():
 			return nil
 		case input := <-l.inputDevice.Process(ctx):
-			if input.IsZero() {
+			// if input != nil && input[0].IsZero() {
+			// 	continue
+			// }
+			if input == nil {
 				continue
 			}
 
-			if err := l.translateAndSend(input); err != nil {
+			// todo iterate inputs
+			if err := l.translateAndSend(input[0]); err != nil {
 				fmt.Println(err) // TODO check error to see if linker must stop
 			}
 		}
