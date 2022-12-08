@@ -37,7 +37,6 @@ type (
 	InputValue string
 )
 
-// func NewKeyboard(delay time.Duration, listener Listener) *Keyboard {
 func NewKeyboard(listener Listener) *Keyboard {
 	return &Keyboard{
 		DebounceDelay: viper.GetDuration("keyboard.debaunce_delay"),

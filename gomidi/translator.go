@@ -19,7 +19,7 @@ var Module = fx.Provide(
 )
 
 type (
-	ControlChangeSwitchTranslator map[keyboard.Keypress]footswitch.Switch
+	ControlChangeSwitchTranslator map[keyboard.Keypress]*footswitch.Switch
 
 	OutputDevice struct {
 		port string
@@ -33,7 +33,7 @@ func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
 
 	for k, v := range switches {
 		s := v.(map[string]interface{})
-		translations[keyboard.Keypress{Value: keyboard.InputValue(k)}] = footswitch.Switch{
+		translations[keyboard.Keypress{Value: keyboard.InputValue(k)}] = &footswitch.Switch{
 			Channel:    uint8(s["channel"].(float64)),
 			Controller: uint8(s["controller"].(float64)),
 		}
@@ -63,8 +63,7 @@ func (t *ControlChangeSwitchTranslator) Translate(str keyboard.Keypress) (midi.M
 		return nil, fmt.Errorf("not found")
 	}
 
-	(*t)[keyboard.Keypress{Value: str.Value}] = *s.Press()
-	return midi.ControlChange(s.Channel, s.Controller, s.Value()), nil
+	return midi.ControlChange(s.Channel, s.Controller, s.Press().Value()), nil
 }
 
 func (out OutputDevice) Send(message midi.Message) error {
