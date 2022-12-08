@@ -56,33 +56,23 @@ func (l *Linker[In, Out]) Link(parent context.Context) error {
 		select {
 		case <-parent.Done():
 			return nil
-		case input := <-l.inputDevice.Process(ctx):
-
-			// if input != nil && input[0].IsZero() {
-			// 	continue
-			// }
-			if input == nil {
-				continue
-			}
-
-			// todo iterate inputs
-			if err := l.translateAndSend(input[0]); err != nil {
-				fmt.Println(err) // TODO check error to see if linker must stop
+		case inputs := <-l.inputDevice.Process(ctx):
+			for _, input := range inputs {
+				// todo iterate inputs
+				if err := l.translateAndSend(input); err != nil {
+					fmt.Println(err) // TODO check error to see if linker must stop
+				}
 			}
 		}
 	}
 }
 
 func (b *Linker[In, Out]) translateAndSend(in In) error {
-	message, err := b.translator.Translate(in)
+	message, translationErr := b.translator.Translate(in)
 
-	if err != nil {
-		return err
+	if translationErr != nil {
+		return translationErr
 	}
 
-	if err := b.outputDevice.Send(message); err != nil {
-		return err
-	}
-
-	return nil
+	return b.outputDevice.Send(message)
 }
