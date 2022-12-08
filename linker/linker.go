@@ -58,9 +58,9 @@ func (l *Linker[In, Out]) Link(parent context.Context) error {
 			return nil
 		case inputs := <-l.inputDevice.Process(ctx):
 			for _, input := range inputs {
-				// todo iterate inputs
+				fmt.Printf("received input: %v\n", input)
 				if err := l.translateAndSend(input); err != nil {
-					fmt.Println(err) // TODO check error to see if linker must stop
+					fmt.Printf("translation error: %v", err) // TODO check error to see if linker must stop
 				}
 			}
 		}
