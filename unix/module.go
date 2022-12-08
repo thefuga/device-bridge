@@ -42,5 +42,5 @@ func newListener() keyboard.Listener {
 }
 
 func newTranslator(t gomidi.ControlChangeSwitchTranslator) UnixTranslator {
-	return t
+	return &t
 }
