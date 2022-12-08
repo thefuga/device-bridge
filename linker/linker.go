@@ -60,7 +60,7 @@ func (l *Linker[In, Out]) Link(parent context.Context) error {
 			for _, input := range inputs {
 				fmt.Printf("received input: %v\n", input)
 				if err := l.translateAndSend(input); err != nil {
-					fmt.Printf("translation error: %v", err) // TODO check error to see if linker must stop
+					fmt.Printf("translation error: %v\n", err) // TODO check error to see if linker must stop
 				}
 			}
 		}
