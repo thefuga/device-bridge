@@ -54,13 +54,13 @@ func NewOutputDevice() *OutputDevice {
 
 func (t *ControlChangeSwitchTranslator) Translate(str keyboard.Keypress) (midi.Message, error) {
 	if str.Type == keyboard.KeyUp {
-		return nil, fmt.Errorf("action not defined")
+		return nil, fmt.Errorf("key up action not defined")
 	}
 
 	s, ok := (*t)[keyboard.Keypress{Value: str.Value}]
 
 	if !ok {
-		return nil, fmt.Errorf("not found")
+		return nil, fmt.Errorf("translation not found")
 	}
 
 	return midi.ControlChange(s.Channel, s.Controller, s.Press().Value()), nil
