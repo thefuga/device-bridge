@@ -1,8 +1,6 @@
 package unix
 
 import (
-	"context"
-
 	"github.com/thefuga/device-linker/cmd/key2midi"
 	"github.com/thefuga/device-linker/gomidi"
 	"github.com/thefuga/device-linker/keyboard"
@@ -15,13 +13,18 @@ import (
 
 var Module = fx.Options(
 	key2midi.Module,
-	fx.Provide(newListener, newTranslator, newlinker),
+	fx.Provide(
+		newListener,
+		newTranslator,
+		newlinker,
+		newLinkerFunc,
+		keyboard.NewStdIn,
+		linker.NewSync,
+	),
 )
 
-var Invokables = fx.Invoke(
-	func(l *UnixLinker) error {
-		return l.Link(context.Background())
-	},
+var Invokables = fx.Options(
+	key2midi.Invokables,
 )
 
 type (
@@ -33,12 +36,17 @@ func newlinker(
 	t *gomidi.ControlChangeSwitchTranslator,
 	kb *keyboard.Keyboard,
 	md *gomidi.OutputDevice,
+	sync linker.Sync,
 ) *UnixLinker {
-	return linker.NewLinker[keyboard.Keypress, midi.Message](t, kb, md)
+	return linker.NewLinker[keyboard.Keypress, midi.Message](t, kb, md, sync)
 }
 
-func newListener() keyboard.Listener {
-	return unix.NewListener()
+func newLinkerFunc(l *UnixLinker) linker.LinkFunc {
+	return l.Link
+}
+
+func newListener(stdin keyboard.StdIn) keyboard.Listener {
+	return unix.NewListener(stdin)
 }
 
 func newTranslator(t gomidi.ControlChangeSwitchTranslator) UnixTranslator {

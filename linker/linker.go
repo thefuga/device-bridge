@@ -2,10 +2,13 @@ package linker
 
 import (
 	"context"
-	"fmt"
 )
 
 type (
+	LinkFunc func(context.Context) error
+
+	Sync chan struct{}
+
 	Translator[In InputValue, Out OutputValue] interface {
 		Translate(In) (Out, error)
 	}
@@ -29,17 +32,23 @@ type (
 		translator   Translator[In, Out]
 		inputDevice  InputDevice[In]
 		outputDevice OutputDevice[Out]
+		sync         Sync
 	}
 )
 
 func NewLinker[In InputValue, Out OutputValue](
-	t Translator[In, Out], inDevice InputDevice[In], outDevice OutputDevice[Out],
+	t Translator[In, Out], inDevice InputDevice[In], outDevice OutputDevice[Out], sync Sync,
 ) *Linker[In, Out] {
 	return &Linker[In, Out]{
 		translator:   t,
 		inputDevice:  inDevice,
 		outputDevice: outDevice,
+		sync:         sync,
 	}
+}
+
+func NewSync() Sync {
+	return make(Sync)
 }
 
 func (l *Linker[In, Out]) Link(parent context.Context) error {
@@ -58,16 +67,19 @@ func (l *Linker[In, Out]) Link(parent context.Context) error {
 			return nil
 		case inputs := <-l.inputDevice.Process(ctx):
 			for _, input := range inputs {
-				fmt.Printf("received input: %v\n", input)
 				if err := l.translateAndSend(input); err != nil {
-					fmt.Printf("translation error: %v\n", err) // TODO check error to see if linker must stop
+					// TODO  handle this error
 				}
 			}
+		default:
+			continue
 		}
 	}
 }
 
 func (b *Linker[In, Out]) translateAndSend(in In) error {
+	defer b.syncState()
+
 	message, translationErr := b.translator.Translate(in)
 
 	if translationErr != nil {
@@ -75,4 +87,8 @@ func (b *Linker[In, Out]) translateAndSend(in In) error {
 	}
 
 	return b.outputDevice.Send(message)
+}
+
+func (b *Linker[In, Out]) syncState() {
+	b.sync <- struct{}{}
 }

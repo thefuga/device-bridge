@@ -1,7 +1,9 @@
 package keyboard
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"time"
 
 	"go.uber.org/fx"
@@ -35,7 +37,18 @@ type (
 	}
 
 	InputValue string
+
+	StdIn interface {
+		io.Reader
+		io.Writer
+		Reset()
+	}
 )
+
+func NewStdIn() StdIn {
+	return &bytes.Buffer{}
+
+}
 
 func NewKeyboard(listener Listener) *Keyboard {
 	return &Keyboard{
@@ -68,21 +81,20 @@ func (kb *Keyboard) Process(ctx context.Context) chan []Keypress {
 
 func (kb *Keyboard) processKeystrokes(ctx context.Context) {
 	var buffer []Keypress
-	for {
-		select {
-		case stdin, _ := <-kb.in:
-			if stdin.Value != "" {
-				buffer = append(buffer, stdin)
-				continue
-			}
-		case <-time.After(kb.DebounceDelay):
-			break
-		case <-ctx.Done():
-			return
-		}
 
-		break
+	select {
+	case stdin, _ := <-kb.in:
+		if stdin.Value != "" {
+			buffer = append(buffer, stdin)
+		}
+	case <-ctx.Done():
+		return
 	}
 
-	kb.out <- buffer
+	if buffer == nil {
+		kb.out <- buffer
+		return
+	}
+
+	kb.out <- buffer[:1]
 }

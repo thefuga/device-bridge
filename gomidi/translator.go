@@ -27,16 +27,13 @@ type (
 	}
 )
 
-func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
-	switches := viper.GetStringMap("gomidi.switches")
-	translations := make(ControlChangeSwitchTranslator, len(switches))
+func NewControlChangeSwitchTranslator(f *footswitch.Footswitch) *ControlChangeSwitchTranslator {
+	keys := viper.GetStringMapString("gomidi.keybindings")
+	translations := make(ControlChangeSwitchTranslator, len(f.Switches))
 
-	for k, v := range switches {
-		s := v.(map[string]interface{})
-		translations[keyboard.Keypress{Value: keyboard.InputValue(k)}] = &footswitch.Switch{
-			Channel:    uint8(s["channel"].(float64)),
-			Controller: uint8(s["controller"].(float64)),
-		}
+	for _, s := range f.Switches {
+		k := keyboard.Keypress{Value: keyboard.InputValue(keys[s.Label])}
+		translations[k] = s
 	}
 
 	return &translations
@@ -45,7 +42,7 @@ func NewControlChangeSwitchTranslator() *ControlChangeSwitchTranslator {
 func NewOutputDevice() *OutputDevice {
 	out, err := drivers.OutByName(viper.GetString("gomidi.out_port_name"))
 	if err != nil {
-		panic(err)
+		// panic(err)
 	}
 	return &OutputDevice{
 		out: out,
