@@ -2,10 +2,12 @@ package linker
 
 import (
 	"context"
+	"sync"
 )
 
 type (
-	LinkFunc func(context.Context) error
+	LinkFunc   func(context.Context) error
+	UnlinkFunc func()
 
 	Sync chan struct{}
 
@@ -33,6 +35,8 @@ type (
 		inputDevice  InputDevice[In]
 		outputDevice OutputDevice[Out]
 		sync         Sync
+		once         sync.Once
+		unlink       context.CancelFunc
 	}
 )
 
@@ -51,28 +55,53 @@ func NewSync() Sync {
 	return make(Sync)
 }
 
-func (l *Linker[In, Out]) Link(parent context.Context) error {
-	ctx, cancel := context.WithCancel(parent)
-	defer cancel()
+func (l *Linker[In, Out]) Unlink() {
+	if l.unlink != nil {
+		l.unlink()
+	}
+
+	l.once = sync.Once{}
+}
+
+func (l *Linker[In, Out]) Link(parent context.Context) (err error) {
+	l.once.Do(func() {
+		ctx, cancel := context.WithCancel(parent)
+		l.unlink = cancel
+
+		if err = l.listenInput(ctx); err != nil {
+			return
+		}
+
+		go l.link(ctx)
+
+	})
+
+	return
+}
+
+func (l *Linker[In, Out]) listenInput(ctx context.Context) error {
+	// ctx, cancel := context.WithCancel(parent)
+	// defer cancel()
 
 	listenErr := l.inputDevice.Listen(ctx)
 
-	if listenErr != nil {
-		return listenErr
-	}
+	return listenErr
+}
+
+func (l *Linker[In, Out]) link(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	defer cancel()
 
 	for {
 		select {
 		case <-parent.Done():
-			return nil
+			return
 		case inputs := <-l.inputDevice.Process(ctx):
 			for _, input := range inputs {
 				if err := l.translateAndSend(input); err != nil {
 					// TODO  handle this error
 				}
 			}
-		default:
-			continue
 		}
 	}
 }

@@ -18,6 +18,7 @@ var Module = fx.Options(
 		newTranslator,
 		newlinker,
 		newLinkerFunc,
+		newUnlinkerFunc,
 		keyboard.NewStdIn,
 		linker.NewSync,
 	),
@@ -43,6 +44,10 @@ func newlinker(
 
 func newLinkerFunc(l *UnixLinker) linker.LinkFunc {
 	return l.Link
+}
+
+func newUnlinkerFunc(l *UnixLinker) linker.UnlinkFunc {
+	return l.Unlink
 }
 
 func newListener(stdin keyboard.StdIn) keyboard.Listener {

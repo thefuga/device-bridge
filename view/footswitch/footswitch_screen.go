@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,22 +26,23 @@ var style = lipgloss.NewStyle().
 type FootswitchScreen struct {
 	footswitch *footswitch.Footswitch
 	link       linker.LinkFunc
-	unlink     context.CancelFunc
+	unlink     linker.UnlinkFunc
 	state      int
 	stdin      keyboard.StdIn
 	sync       linker.Sync
-	once       sync.Once
 }
 
 func NewFootswitchScreen(
 	f *footswitch.Footswitch,
 	l linker.LinkFunc,
+	ul linker.UnlinkFunc,
 	stdin keyboard.StdIn,
 	sync linker.Sync,
 ) FootswitchScreen {
 	return FootswitchScreen{
 		footswitch: f,
 		link:       l,
+		unlink:     ul,
 		stdin:      stdin,
 		sync:       sync,
 	}
@@ -68,30 +68,35 @@ func (m FootswitchScreen) Init() tea.Cmd {
 }
 
 func (m FootswitchScreen) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m.once.Do(func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		m.unlink = cancel
-		go m.link(ctx)
-	})
+	m.link(context.Background())
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc":
-			m.unlink()
-			m.once = sync.Once{}
-		default:
-			m.stdin.Write([]byte(msg.String()))
-			select {
-			case <-m.sync:
-				return m, nil
-			case <-time.After(1 * time.Second): // This prevents the screen from freezing in case the sync channel doesn't return
-				return m, nil
-			}
-		}
+		m.updateKeyMessage(msg)
 	}
 
 	return m, nil
+}
+
+func (m FootswitchScreen) updateKeyMessage(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.unlink()
+	default:
+		m.processInput(msg.String())
+	}
+
+	return m, nil
+}
+
+func (m *FootswitchScreen) processInput(msg string) {
+	m.stdin.Write([]byte(msg))
+	select {
+	case <-m.sync:
+		return
+	case <-time.After(1 * time.Second): // This prevents the screen from freezing in case the sync channel doesn't return
+		return
+	}
 }
 
 func ledSymbol(s bool) string {
