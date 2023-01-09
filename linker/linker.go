@@ -3,6 +3,8 @@ package linker
 import (
 	"context"
 	"sync"
+
+	"github.com/thefuga/go-collections"
 )
 
 type (
@@ -80,12 +82,7 @@ func (l *Linker[In, Out]) Link(parent context.Context) (err error) {
 }
 
 func (l *Linker[In, Out]) listenInput(ctx context.Context) error {
-	// ctx, cancel := context.WithCancel(parent)
-	// defer cancel()
-
-	listenErr := l.inputDevice.Listen(ctx)
-
-	return listenErr
+	return l.inputDevice.Listen(ctx)
 }
 
 func (l *Linker[In, Out]) link(parent context.Context) {
@@ -97,11 +94,11 @@ func (l *Linker[In, Out]) link(parent context.Context) {
 		case <-parent.Done():
 			return
 		case inputs := <-l.inputDevice.Process(ctx):
-			for _, input := range inputs {
-				if err := l.translateAndSend(input); err != nil {
+			collections.Each(func(_ int, in In) {
+				if err := l.translateAndSend(in); err != nil {
 					// TODO  handle this error
 				}
-			}
+			}, inputs)
 		}
 	}
 }

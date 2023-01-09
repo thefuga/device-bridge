@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.6.0
 	github.com/moutend/go-hook v0.1.0
 	github.com/spf13/viper v1.14.0
+	github.com/thefuga/go-collections v0.1.0
 	gitlab.com/gomidi/midi/v2 v2.0.25
 	go.uber.org/fx v1.19.0
 )

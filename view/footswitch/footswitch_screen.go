@@ -12,6 +12,7 @@ import (
 	"github.com/thefuga/device-linker/footswitch"
 	"github.com/thefuga/device-linker/keyboard"
 	"github.com/thefuga/device-linker/linker"
+	"github.com/thefuga/go-collections"
 )
 
 var style = lipgloss.NewStyle().
@@ -49,18 +50,14 @@ func NewFootswitchScreen(
 }
 
 func (s FootswitchScreen) View() string {
-	var renderedSwitches []string
-
-	for _, v := range s.footswitch.Switches {
-		renderedSwitches = append(
-			renderedSwitches,
-			fmt.Sprintf("%s  %s", v.Label, ledSymbol(v.On)+""),
-		)
-	}
-
+	renderedSwitches := collections.Map(s.footswitch.Switches, serializeSwitch)
 	sort.Strings(renderedSwitches)
 
 	return style.Render(strings.Join(renderedSwitches, "\n"))
+}
+
+func serializeSwitch(_ int, s *footswitch.Switch) string {
+	return fmt.Sprintf("%s  %s", s.Label, ledSymbol(s.On)+"")
 }
 
 func (m FootswitchScreen) Init() tea.Cmd {

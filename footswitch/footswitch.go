@@ -2,6 +2,7 @@ package footswitch
 
 import (
 	"github.com/spf13/viper"
+	"github.com/thefuga/go-collections"
 	"go.uber.org/fx"
 )
 
@@ -21,20 +22,27 @@ type (
 )
 
 func NewFootswitch() *Footswitch {
-	configSwitches := viper.GetStringMap("gomidi.switches")
-	var switches []*Switch
+	return &Footswitch{Switches: buildGomidiSwitches()}
+}
 
-	for k, v := range configSwitches {
-		s := v.(map[string]interface{})
+func buildGomidiSwitches() []*Switch {
+	return collections.Map(
+		getSlice("gomidi.switches"),
+		interfaceToSwitch,
+	)
+}
 
-		switches = append(switches, &Switch{
-			Channel:    uint8(s["channel"].(float64)),
-			Controller: uint8(s["controller"].(float64)),
-			Label:      k,
-		})
+func getSlice(key string) []interface{} {
+	return viper.Get(key).([]interface{})
+}
+
+func interfaceToSwitch(_ int, v interface{}) *Switch {
+	s := v.(map[string]interface{})
+	return &Switch{
+		Channel:    uint8(s["channel"].(float64)),
+		Controller: uint8(s["controller"].(float64)),
+		Label:      s["label"].(string),
 	}
-
-	return &Footswitch{Switches: switches}
 }
 
 func (k *Switch) Press() *Switch {
