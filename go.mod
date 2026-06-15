@@ -1,6 +1,6 @@
 module github.com/thefuga/device-linker
 
-go 1.19
+go 1.24.2
 
 require (
 	github.com/charmbracelet/bubbletea v0.23.1
@@ -8,7 +8,7 @@ require (
 	github.com/moutend/go-hook v0.1.0
 	github.com/spf13/viper v1.14.0
 	github.com/thefuga/go-collections v0.1.0
-	gitlab.com/gomidi/midi/v2 v2.0.25
+	gitlab.com/gomidi/midi/v2 v2.3.24
 	go.uber.org/fx v1.19.0
 )
 
