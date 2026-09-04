@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/charmbracelet/bubbletea v0.23.1
-	github.com/charmbracelet/lipgloss v0.6.0
+	github.com/charmbracelet/lipgloss/v2 v2.0.6
 	github.com/moutend/go-hook v0.1.0
 	github.com/spf13/viper v1.14.0
 	github.com/thefuga/go-collections v0.1.0
